@@ -38,10 +38,6 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMapEnabled = true;
 
-        //axes helper
-        var axes = new THREE.AxisHelper( 20 );
-        scene.add(axes);
-
         // setup the control gui
         var controls2 = new function () {
             this.roomHeight = 15;
@@ -49,37 +45,31 @@
             this.angle = 0;
 
             this.redraw = function () {
-                //scene = new THREE.Scene();
-
-                //scene.children = [];
                 scene.clear();
-                //renderer.render( scene, camera );
-                //requestAnimationFrame( render );
-                //controls.update();
                 drawEverything();
-                //render();
             };
         }
 
         THREE.Object3D.prototype.clear = function(){
             var children = this.children;
-            for(var i = children.length-1;i>=5;i--) {
+            for(var i = children.length-1;i>=4;i--) {
                 var child = children[i];
                 if (child.id != 7 || child.id!= 6) {
                     child.clear();
                     this.remove(child);
                 }
+
             };
         };
 
         var gui = new dat.GUI();
-        gui.add(controls2, 'roomHeight', 5, 20).onChange(controls2.redraw);
-        gui.add(controls2, 'nSteps', 1, 30).onChange(controls2.redraw);
-        gui.add(controls2, 'angle', 0, 90).onChange(controls2.redraw);
+        gui.add(controls2, 'roomHeight', 5, 20).step(1).onChange(controls2.redraw);
+        gui.add(controls2, 'nSteps', 1, 30).step(1).onChange(controls2.redraw);
+        gui.add(controls2, 'angle', 0, 90).step(1).onChange(controls2.redraw);
 
         // create the ground plane
         var planeGeometry = new THREE.PlaneGeometry(60,20);
-        var planeMaterial = new THREE.MeshLambertMaterial({color: 0xffffff});
+        var planeMaterial = new THREE.MeshLambertMaterial({color: 0xDFB391});
         var plane = new THREE.Mesh(planeGeometry,planeMaterial);
         plane.receiveShadow  = true;
 
@@ -134,7 +124,7 @@
         }
 
         var extrudeSettings = {
-            steps: 2,
+            steps: 1,
             amount: 0,
             bevelEnabled: true,
             bevelThickness: 0.2,
@@ -145,7 +135,7 @@
         var geometry = new THREE.ExtrudeGeometry( drawShape(), extrudeSettings );
         var geometry2 = new THREE.ExtrudeGeometry( drawShape2(), extrudeSettings );
         var geometry3 = new THREE.ExtrudeGeometry( drawShape3(), extrudeSettings );
-        var material = new THREE.MeshLambertMaterial( { color: 0xB48D51 } );
+        var material = new THREE.MeshLambertMaterial( { color: 	0xB57238 } );
 
         // create steps
         var cubeGeometry = new THREE.CubeGeometry(radius,stepThickness,stepWidth);
@@ -153,18 +143,17 @@
 
         function drawEverything() {
             var step;
-            var roomHeight = controls2.roomHeight;
+            var roomHeight = Math.round(controls2.roomHeight);
             var nSteps = Math.round(controls2.nSteps);
             var angle = controls2.angle;
-            var box, i;
 
             var railsPoints = [];
             var smallPoints = [];
             var cubePoints = [];
-            for (i = 0; i < nSteps; i++) {
+            for (var i = 0; i < nSteps; i++) {
                 var mesh;
                 if (i % 2 == 0) mesh = new THREE.Mesh(geometry, material);
-                else mesh = new THREE.Mesh(geometry2, material);
+                           else mesh = new THREE.Mesh(geometry2, material);
                 mesh.rotation.x = 90 * Math.PI / 180;
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
@@ -195,10 +184,11 @@
                     step.add(tubeMesh);
                     step.add(inv);
                 }
+
                 if (i == 0) {
                     var smallPoints = [];
                     smallPoints.push(new THREE.Vector3(mesh.position.x + length / 2, mesh.position.y, mesh.position.z + width / 2));
-                    smallPoints.push(new THREE.Vector3(mesh.position.x + length / 2, mesh.position.y - 1, mesh.position.z + width / 2));
+                    smallPoints.push(new THREE.Vector3(mesh.position.x + length / 2, 0, mesh.position.z + width / 2));
                     var tubeGeometry3 = new THREE.TubeGeometry(new THREE.SplineCurve3(smallPoints), 30, 0.2, 30, false);
                     var smallTube = createMesh(tubeGeometry3);
                     smallTube.castShadow = true;
@@ -230,7 +220,7 @@
                 smallTube.castShadow = true;
                 step.add(smallTube);
 
-                step.add(smallTube);
+               // step.add(smallTube);
 
                 if (i==nSteps-1){
                     var planeGeometry = new THREE.PlaneGeometry(20,20);
@@ -258,7 +248,6 @@
                 }
             }
 
-
             var b = 0;
             while (b < nSteps * 2 - 1) {
                 var shit = [];
@@ -281,21 +270,6 @@
             tubeMesh2.castShadow = true;
             scene.add(tubeMesh2);
 
-            /*
-            var planeGeometry = new THREE.PlaneGeometry(20,20);
-            var plane2 = new THREE.Mesh(planeGeometry,planeMaterial);
-            plane2.receiveShadow  = true;
-            // rotate and position the plane
-            plane2.rotation.x=-0.5*Math.PI;
-            plane2.rotation.z=controls2.angle*Math.PI/180;
-            step.updateMatrixWorld();
-            var vector = new THREE.Vector3();
-            vector.getPositionFromMatrix(cubePoints[cubePoints.length-1].matrixWorld);
-            plane2.position.x=vector.x+Math.cos(controls2.angle)*10;
-            plane2.position.y=vector.y+0.3;
-            plane2.position.z=vector.z-Math.sin(controls2.angle)*11;
-            scene.add(plane2);
-            */
             var light = new THREE.AmbientLight( 0x404040, 20 ); // soft white light
             scene.add(light);
         }
@@ -311,10 +285,10 @@
 
             // create a multimaterial
             //var mesh = THREE.SceneUtils.createMultiMaterialObject(geom, [meshMaterial2]);
-            var mesh =new THREE.Mesh(geom, meshMaterial2);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            return mesh;
+            var mesh2 =new THREE.Mesh(geom, meshMaterial2);
+            mesh2.castShadow = true;
+            mesh2.receiveShadow = true;
+            return mesh2;
         }
 
         // position and point the camera to the center of the scene
@@ -325,7 +299,7 @@
 
         // add spotlight for the shadows
         var spotLight = new THREE.SpotLight( 0xffffff );
-        spotLight.position.set( -40, 30, -10 );
+        spotLight.position.set( -40, 80, -10 );
         spotLight.castShadow = true;
         scene.add( spotLight );
 
@@ -341,7 +315,7 @@
             controls.update();
         }
 
-        controls2.redraw();
+       // controls2.redraw();
     });
 
 </script>
