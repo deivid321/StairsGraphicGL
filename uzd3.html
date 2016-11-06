@@ -28,36 +28,66 @@
 
     // once everything is loaded, we run our Three.js stuff.
     $(function () {
-
         // create a scene, that will hold all our elements such as objects, cameras and lights.
         var scene = new THREE.Scene();
-
         // create a camera, which defines where we're looking at.
         var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-
         // create a render and set the size
         var renderer = new THREE.WebGLRenderer();
-
         renderer.setClearColorHex(0xEEEEEE, 1.0);
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMapEnabled = true;
 
-        // axes helper
-        // var axes = new THREE.AxisHelper( 20 );
-        // scene.add(axes);
+        //axes helper
+        var axes = new THREE.AxisHelper( 20 );
+        scene.add(axes);
 
+        // setup the control gui
+        var controls2 = new function () {
+            this.roomHeight = 15;
+            this.nSteps = 15;
+            this.angle = 0;
+
+            this.redraw = function () {
+                //scene = new THREE.Scene();
+
+                //scene.children = [];
+                scene.clear();
+                //renderer.render( scene, camera );
+                //requestAnimationFrame( render );
+                //controls.update();
+                drawEverything();
+                //render();
+            };
+        }
+
+        THREE.Object3D.prototype.clear = function(){
+            var children = this.children;
+            for(var i = children.length-1;i>=5;i--) {
+                var child = children[i];
+                if (child.id != 7 || child.id!= 6) {
+                    child.clear();
+                    this.remove(child);
+                }
+            };
+        };
+
+        var gui = new dat.GUI();
+        gui.add(controls2, 'roomHeight', 5, 20).onChange(controls2.redraw);
+        gui.add(controls2, 'nSteps', 1, 30).onChange(controls2.redraw);
+        gui.add(controls2, 'angle', 0, 90).onChange(controls2.redraw);
 
         // create the ground plane
         var planeGeometry = new THREE.PlaneGeometry(60,20);
-        var planeMaterial =    new THREE.MeshLambertMaterial({color: 0xffffff});
+        var planeMaterial = new THREE.MeshLambertMaterial({color: 0xffffff});
         var plane = new THREE.Mesh(planeGeometry,planeMaterial);
         plane.receiveShadow  = true;
 
         // rotate and position the plane
         plane.rotation.x=-0.5*Math.PI;
-        plane.position.x=15
-        plane.position.y=0
-        plane.position.z=0
+        plane.position.x=15;
+        plane.position.y=0;
+        plane.position.z=0;
 
         // add the plane to the scene
         scene.add(plane);
@@ -66,7 +96,6 @@
         var radius = 7;
         //var roomHeight = 25;
         var stepThickness = 1;
-        //var roomHeight = 15*stepThickness;
         var stepWidth = 2.5;
         var stepOffset = 2;
 
@@ -117,127 +146,161 @@
         var geometry2 = new THREE.ExtrudeGeometry( drawShape2(), extrudeSettings );
         var geometry3 = new THREE.ExtrudeGeometry( drawShape3(), extrudeSettings );
         var material = new THREE.MeshLambertMaterial( { color: 0xB48D51 } );
-        //var mesh = new THREE.Mesh( geometry, material ) ;
-       // mesh.rotation.x=90*Math.PI/180;
-        //scene.add( mesh );
 
         // create steps
         var cubeGeometry = new THREE.CubeGeometry(radius,stepThickness,stepWidth);
         var cubeMaterial = new THREE.MeshLambertMaterial({color: 0xff0000});
 
-        var roomHeight = 15;
-        var nSteps = 15;
-        var angle = 45;
-        var step, box, i;
+        function drawEverything() {
+            var step;
+            var roomHeight = controls2.roomHeight;
+            var nSteps = Math.round(controls2.nSteps);
+            var angle = controls2.angle;
+            var box, i;
 
-        var railsPoints = [];
-        var smallPoints = [];
-        var cubePoints = [];
-        for (i = 0; i < nSteps; i++) {
-            var mesh;
-            if (i%2==0) mesh = new THREE.Mesh( geometry, material );
-                else mesh = new THREE.Mesh( geometry2, material ) ;
-            mesh.rotation.x=90*Math.PI/180;
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            var cube = new createMesh( geometry3);
+            var railsPoints = [];
+            var smallPoints = [];
+            var cubePoints = [];
+            for (i = 0; i < nSteps; i++) {
+                var mesh;
+                if (i % 2 == 0) mesh = new THREE.Mesh(geometry, material);
+                else mesh = new THREE.Mesh(geometry2, material);
+                mesh.rotation.x = 90 * Math.PI / 180;
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                var cube = new createMesh(geometry3);
 
-            // position the step
-            //mesh.position.x=-0.5*radius;
-            mesh.position.x = i;
-            mesh.position.y=roomHeight*((i+1)/nSteps);
-            //mesh.position.z=0.5*stepOffset;
-            // rotate
-            step = new THREE.Object3D();
-            var inv = new THREE.Object3D();
-            var inv2 = new THREE.Object3D();
-            step.add(mesh);
+                // position the step
+                //mesh.position.x=-0.5*radius;
+                mesh.position.x = i;
+                mesh.position.y = roomHeight * ((i + 1) / nSteps);
+                //mesh.position.z=0.5*stepOffset;
+                // rotate
+                step = new THREE.Object3D();
+                var inv = new THREE.Object3D();
+                var inv2 = new THREE.Object3D();
+                step.add(mesh);
 
-            step.rotation.y=angle/nSteps*Math.PI/180*i; //WTF is this?
-            var tubeMesh;
-            if (i%2==0 || i==nSteps-1) {
-                var points = [];
-                points.push(new THREE.Vector3(mesh.position.x+length/2, mesh.position.y-0.3, mesh.position.z+0.4));
-                points.push(new THREE.Vector3(mesh.position.x+length/2, mesh.position.y, mesh.position.z-0.4));
-                points.push(new THREE.Vector3(mesh.position.x+length/2, mesh.position.y + 3, mesh.position.z-0.4));
-                inv.position = new THREE.Vector3(mesh.position.x+length/2, mesh.position.y + 3, mesh.position.z-0.4);
-                var tubeGeometry = new THREE.TubeGeometry(new THREE.SplineCurve3(points), 200, 0.1, 20, false);
-                var tubeMesh = createMesh(tubeGeometry);
-                tubeMesh.castShadow = true;
-                step.add(tubeMesh);
-                step.add(inv);
-            }
-            if (i==0){
+                step.rotation.y = angle / nSteps * Math.PI / 180 * i; //WTF is this?
+                var tubeMesh;
+                if (i % 2 == 0 || i == nSteps - 1) {
+                    var points = [];
+                    points.push(new THREE.Vector3(mesh.position.x + length / 2, mesh.position.y - 0.3, mesh.position.z + 0.4));
+                    points.push(new THREE.Vector3(mesh.position.x + length / 2, mesh.position.y, mesh.position.z - 0.4));
+                    points.push(new THREE.Vector3(mesh.position.x + length / 2, mesh.position.y + 3, mesh.position.z - 0.4));
+                    inv.position = new THREE.Vector3(mesh.position.x + length / 2, mesh.position.y + 3, mesh.position.z - 0.4);
+                    var tubeGeometry = new THREE.TubeGeometry(new THREE.SplineCurve3(points), 200, 0.1, 20, false);
+                    var tubeMesh = createMesh(tubeGeometry);
+                    tubeMesh.castShadow = true;
+                    step.add(tubeMesh);
+                    step.add(inv);
+                }
+                if (i == 0) {
+                    var smallPoints = [];
+                    smallPoints.push(new THREE.Vector3(mesh.position.x + length / 2, mesh.position.y, mesh.position.z + width / 2));
+                    smallPoints.push(new THREE.Vector3(mesh.position.x + length / 2, mesh.position.y - 1, mesh.position.z + width / 2));
+                    var tubeGeometry3 = new THREE.TubeGeometry(new THREE.SplineCurve3(smallPoints), 30, 0.2, 30, false);
+                    var smallTube = createMesh(tubeGeometry3);
+                    smallTube.castShadow = true;
+                    step.add(smallTube);
+
+                    inv2 = new THREE.Object3D();
+                    inv2.position = new THREE.Vector3(mesh.position.x + length + 0.2, mesh.position.y - 0.3, mesh.position.z + width / 2);
+                    step.add(inv2);
+                    //cubePoints.push(inv2);
+                    inv2 = new THREE.Object3D();
+                    inv2.position = new THREE.Vector3(mesh.position.x + length / 2, mesh.position.y - 0.3, mesh.position.z + width / 2);
+                    step.add(inv2);
+                    cubePoints.push(inv2);
+                }
+
                 var smallPoints = [];
-                smallPoints.push(new THREE.Vector3(mesh.position.x+length/2, mesh.position.y, mesh.position.z+width/2));
-                smallPoints.push(new THREE.Vector3(mesh.position.x+length/2, mesh.position.y-1, mesh.position.z+width/2));
+                smallPoints.push(new THREE.Vector3(mesh.position.x + length, mesh.position.y - 0.2, mesh.position.z + width / 2));
+                smallPoints.push(new THREE.Vector3(mesh.position.x + length, mesh.position.y + roomHeight / nSteps, mesh.position.z + width / 2));
+                inv2 = new THREE.Object3D();
+                inv2.position = new THREE.Vector3(mesh.position.x + length + 0.2, mesh.position.y - 0.3, mesh.position.z + width / 2);
+                step.add(inv2);
+                cubePoints.push(inv2);
+                inv2 = new THREE.Object3D();
+                inv2.position = new THREE.Vector3(mesh.position.x + length, mesh.position.y + roomHeight / nSteps - 0.3, mesh.position.z + width / 2);
+                step.add(inv2);
+                cubePoints.push(inv2);
                 var tubeGeometry3 = new THREE.TubeGeometry(new THREE.SplineCurve3(smallPoints), 30, 0.2, 30, false);
                 var smallTube = createMesh(tubeGeometry3);
                 smallTube.castShadow = true;
                 step.add(smallTube);
 
-                inv2 = new THREE.Object3D();
-                inv2.position = new THREE.Vector3(mesh.position.x+length+0.2, mesh.position.y-0.3, mesh.position.z+width/2);
-                step.add(inv2);
-                //cubePoints.push(inv2);
-                inv2 = new THREE.Object3D();
-                inv2.position = new THREE.Vector3(mesh.position.x+length/2, mesh.position.y-0.3, mesh.position.z+width/2);
-                step.add(inv2);
-                cubePoints.push(inv2);
+                step.add(smallTube);
+
+                if (i==nSteps-1){
+                    var planeGeometry = new THREE.PlaneGeometry(20,20);
+                    var plane2 = new THREE.Mesh(planeGeometry,planeMaterial);
+                    plane2.rotation.x=-0.5*Math.PI;
+                    plane2.rotation.z=angle*Math.PI/180;
+                    plane2.receiveShadow  = true;
+                    step.updateMatrixWorld();
+                    var vector = new THREE.Vector3();
+                    vector.getPositionFromMatrix(cubePoints[cubePoints.length-1].matrixWorld);
+                    plane2.position.x=vector.x+Math.cos(angle*Math.PI/180)*10;
+                    plane2.position.y=vector.y;
+                    plane2.position.z=vector.z-Math.sin(angle*Math.PI/180)*10;;
+                    scene.add(plane2);
+                }
+
+                scene.add(step);
+                if (i % 2 == 0 || i == nSteps - 1) {
+                    scene.updateMatrixWorld(true);
+                    step.updateMatrixWorld();
+                    var vector = new THREE.Vector3();
+                    vector.getPositionFromMatrix(inv.matrixWorld);
+                    var vec = new THREE.Vector3(vector.x, vector.y, vector.z);
+                    railsPoints.push(vec);
+                }
             }
 
-            var smallPoints = [];
-            smallPoints.push(new THREE.Vector3(mesh.position.x+length, mesh.position.y-0.2, mesh.position.z+width/2));
-            smallPoints.push(new THREE.Vector3(mesh.position.x+length, mesh.position.y+roomHeight/nSteps, mesh.position.z+width/2));
-            inv2 = new THREE.Object3D();
-            inv2.position = new THREE.Vector3(mesh.position.x+length+0.2, mesh.position.y-0.3, mesh.position.z+width/2);
-            step.add(inv2);
-            cubePoints.push(inv2);
-            inv2 = new THREE.Object3D();
-            inv2.position = new THREE.Vector3(mesh.position.x+length, mesh.position.y+roomHeight/nSteps-0.3, mesh.position.z+width/2);
-            step.add(inv2);
-            cubePoints.push(inv2);
-            var tubeGeometry3 = new THREE.TubeGeometry(new THREE.SplineCurve3(smallPoints), 30, 0.2, 30, false);
-            var smallTube = createMesh(tubeGeometry3);
-            smallTube.castShadow = true;
-            step.add(smallTube);
 
-
-            step.add(smallTube);
-            scene.add(step);
-            if (i%2==0 || i==nSteps-1) {
-                scene.updateMatrixWorld(true);
+            var b = 0;
+            while (b < nSteps * 2 - 1) {
+                var shit = [];
+                shit = [cubePoints[b], cubePoints[b + 1]];
                 step.updateMatrixWorld();
                 var vector = new THREE.Vector3();
-                vector.getPositionFromMatrix(inv.matrixWorld);
-                var vec = new THREE.Vector3(vector.x, vector.y, vector.z);
-                railsPoints.push(vec);
+                vector.getPositionFromMatrix(shit[0].matrixWorld);
+                var vector2 = new THREE.Vector3();
+                vector2.getPositionFromMatrix(shit[1].matrixWorld);
+                var vecas = [vector, vector2];
+                var cubeGeometry4 = new THREE.TubeGeometry(new THREE.SplineCurve3(vecas), 20, 0.2, 5, false);
+                var cubeTube = createMesh(cubeGeometry4);
+                cubeTube.castShadow = true;
+                scene.add(cubeTube);
+                b += 2;
             }
-        }
-        var i = 0;
-        while (i<nSteps*2-1) {
-            var shit = [];
-            shit = [cubePoints[i], cubePoints[i+1]];
+
+            var tubeGeometry2 = new THREE.TubeGeometry(new THREE.SplineCurve3(railsPoints), 30, 0.2, 30, false);
+            var tubeMesh2 = createMesh(tubeGeometry2);
+            tubeMesh2.castShadow = true;
+            scene.add(tubeMesh2);
+
+            /*
+            var planeGeometry = new THREE.PlaneGeometry(20,20);
+            var plane2 = new THREE.Mesh(planeGeometry,planeMaterial);
+            plane2.receiveShadow  = true;
+            // rotate and position the plane
+            plane2.rotation.x=-0.5*Math.PI;
+            plane2.rotation.z=controls2.angle*Math.PI/180;
             step.updateMatrixWorld();
             var vector = new THREE.Vector3();
-            vector.getPositionFromMatrix(shit[0].matrixWorld);
-            var vector2 = new THREE.Vector3();
-            vector2.getPositionFromMatrix(shit[1].matrixWorld);
-            var vecas = [vector, vector2];
-            var cubeGeometry4 = new THREE.TubeGeometry(new THREE.SplineCurve3(vecas), 20, 0.2, 5, false);
-            var cubeTube = createMesh(cubeGeometry4);
-            cubeTube.castShadow = true;
-            scene.add(cubeTube);
-            i+=2;
+            vector.getPositionFromMatrix(cubePoints[cubePoints.length-1].matrixWorld);
+            plane2.position.x=vector.x+Math.cos(controls2.angle)*10;
+            plane2.position.y=vector.y+0.3;
+            plane2.position.z=vector.z-Math.sin(controls2.angle)*11;
+            scene.add(plane2);
+            */
+            var light = new THREE.AmbientLight( 0x404040, 20 ); // soft white light
+            scene.add(light);
         }
 
-        var tubeGeometry2 = new THREE.TubeGeometry(new THREE.SplineCurve3(railsPoints), 30, 0.2, 30, false);
-        var tubeMesh2 = createMesh(tubeGeometry2);
-        tubeMesh2.castShadow = true;
-        scene.add(tubeMesh2);
-
         function createMesh(geom) {
-
             // assign two materials
             //var meshMaterial = new THREE.MeshNormalMaterial();
             var meshMaterial = new THREE.MeshBasicMaterial({color: 0x748290, transparent: true,wireframe:true, opacity: 1});
@@ -254,25 +317,6 @@
             return mesh;
         }
 
-        var planeGeometry = new THREE.PlaneGeometry(20,20);
-        var plane2 = new THREE.Mesh(planeGeometry,planeMaterial);
-        plane2.receiveShadow  = true;
-        // rotate and position the plane
-        plane2.rotation.x=-0.5*Math.PI;
-        plane2.rotation.z=angle*Math.PI/180;
-        step.updateMatrixWorld();
-        var vector = new THREE.Vector3();
-        vector.getPositionFromMatrix(cubePoints[cubePoints.length-1].matrixWorld);
-        plane2.position.x=vector.x+Math.cos(angle)*8.5;
-        plane2.position.y=vector.y+0.3;
-        plane2.position.z=vector.z-Math.sin(angle)*11;
-        //plane2.position.x=cubePoints[cubePoints.length-1].x;
-        //plane2.position.y=cubePoints[cubePoints.length-1].y;
-        //plane2.position.z=cubePoints[cubePoints.length-1].z;
-
-        // add the plane to the scene
-        scene.add(plane2);
-
         // position and point the camera to the center of the scene
         camera.position.x = -30;
         camera.position.y = 40;
@@ -285,9 +329,6 @@
         spotLight.castShadow = true;
         scene.add( spotLight );
 
-        var light = new THREE.AmbientLight( 0x404040, 20 ); // soft white light
-        scene.add( light );
-
         // add the output of the renderer to the html element
         $("#WebGL-output").append(renderer.domElement);
         var controls = new THREE.TrackballControls( camera, renderer.domElement );
@@ -299,9 +340,9 @@
             requestAnimationFrame( render );
             controls.update();
         }
+
+        controls2.redraw();
     });
-
-
 
 </script>
 </body>
